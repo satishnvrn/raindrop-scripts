@@ -1,6 +1,12 @@
 # Environment variables
 .env
 
+# Virtual environment
+.venv/
+
+# Claude Code local settings (contains machine-specific paths)
+.claude/
+
 # Python
 __pycache__/
 *.py[cod]
