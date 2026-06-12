@@ -163,6 +163,37 @@
       text-align: center;
       margin-top: 3rem;
     }
+
+    .card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 0.5rem;
+    }
+
+    .btn-delete {
+      flex-shrink: 0;
+      background: none;
+      border: 1px solid #334155;
+      border-radius: 6px;
+      color: #64748b;
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+      line-height: 1.4;
+    }
+
+    .btn-delete:hover { color: #f87171; border-color: #f87171; }
+    .btn-delete:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    @keyframes fadeOut {
+      to { opacity: 0; transform: scale(0.95); }
+    }
+
+    .card.removing {
+      animation: fadeOut 0.2s ease forwards;
+    }
   </style>
 </head>
 <body>
@@ -217,8 +248,12 @@
 
           const card = document.createElement("div");
           card.className = "card";
+          card.dataset.id = b.id;
           card.innerHTML = `
-            <p class="card-title">${escHtml(b.title)}</p>
+            <div class="card-header">
+              <p class="card-title">${escHtml(b.title)}</p>
+              <button class="btn-delete" title="Delete bookmark" onclick="deleteBookmark(this)">Delete</button>
+            </div>
             <div class="card-link"><a href="${escHtml(b.link)}" target="_blank" rel="noopener">${escHtml(b.link)}</a></div>
             ${excerpt}
             ${(tags || date) ? `<div class="card-meta">${tags}${date}</div>` : ""}
@@ -229,6 +264,23 @@
         status.textContent = "Error: " + err.message;
       } finally {
         btn.disabled = false;
+      }
+    }
+
+    async function deleteBookmark(btn) {
+      const card = btn.closest(".card");
+      const id = card.dataset.id;
+      btn.disabled = true;
+      btn.textContent = "…";
+      try {
+        const res = await fetch(`/api/bookmark/${id}`, { method: "DELETE" });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        card.classList.add("removing");
+        card.addEventListener("animationend", () => card.remove(), { once: true });
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = "Delete";
+        alert("Failed to delete: " + err.message);
       }
     }
 

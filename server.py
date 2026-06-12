@@ -6,11 +6,13 @@ Serves index.html and a /api/random endpoint.
 
 import json
 import os
+import re
 import sys
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import urlparse, parse_qs
 
 from random_bookmark import RaindropRandomizer, get_api_token
+from delete_bookmark import delete_bookmark
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -29,6 +31,20 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_DELETE(self):
+        m = re.fullmatch(r"/api/bookmark/(\d+)", urlparse(self.path).path)
+        if not m:
+            self.send_error(404)
+            return
+        bookmark_id = int(m.group(1))
+        ok = delete_bookmark(self.randomizer.api_token, bookmark_id)
+        body = json.dumps({"ok": ok}).encode()
+        self.send_response(200 if ok else 500)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", len(body))
+        self.end_headers()
+        self.wfile.write(body)
+
     def _handle_api(self, qs):
         try:
             count = max(1, min(20, int(qs.get("count", ["1"])[0])))
@@ -40,6 +56,7 @@ class Handler(BaseHTTPRequestHandler):
             bookmark = self.randomizer.get_random_bookmark()
             if bookmark:
                 results.append({
+                    "id": bookmark.get("_id"),
                     "title": bookmark.get("title", "Untitled"),
                     "link": bookmark.get("link", ""),
                     "excerpt": bookmark.get("excerpt", ""),
